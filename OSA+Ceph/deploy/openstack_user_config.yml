@@ -127,13 +127,13 @@ storage-infra_hosts: *infrastructure_hosts
 storage_hosts: *infrastructure_hosts
 
 # glance
-image_hosts: *infrastructure_hosts
+image_hosts: *infrastructure_hosts // na to alla3o
 
 # nova api, conductor, etc services
-compute-infra_hosts: *infrastructure_hosts
+compute-infra_hosts: *infrastructure_hosts // na to alla3o
 
 # heat
-orchestration_hosts: *infrastructure_hosts
+orchestration_hosts: *infrastructure_hosts // na to alla3o
 
 # horizon
 dashboard_hosts: *infrastructure_hosts
