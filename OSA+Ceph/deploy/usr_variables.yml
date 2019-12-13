@@ -1,0 +1,162 @@
+debug: false
+verbose: true
+# GENERAL #
+###########
+
+######################################
+# Releases name to number dictionary #
+######################################
+##ceph_release_num: 12.2.12
+#  dumpling: 0.67
+#  emperor: 0.72
+#  firefly: 0.80
+#  giant: 0.87
+#  hammer: 0.94
+#  infernalis: 9
+#  jewel: 10
+#  kraken: 11
+#  luminous: 12
+#  mimic: 13
+#  nautilus: 14
+#  dev: 99
+#cluster: ceph
+
+debian_package_dependencies: []
+
+ceph_test: false
+
+ntp_service_enabled: true
+
+# Set type of NTP client daemon to use, valid entries are chronyd, ntpd or timesyncd
+# Note that this selection is currently ignored on containerized deployments
+ntp_daemon_type: chronyd
+
+# This variable determines if ceph packages can be updated.  If False, the
+# package resources will use "state=present".  If True, they will use
+# "state=latest".
+upgrade_ceph_packages: True
+
+ceph_use_distro_backports: false # DEBIAN ONLY
+
+ceph_origin: repository
+#valid_ceph_origins:
+#  - repository
+#  - distro
+#  - local
+
+
+#ceph_repository: dummy
+#valid_ceph_repository:
+#  - community
+#  - rhcs
+#  - dev
+#  - uca
+#  - custom
+#  - obs
+ceph_repository: uca
+
+ceph_stable_repo_uca: "http://ubuntu-cloud.archive.canonical.com/ubuntu"
+ceph_stable_openstack_release_uca: pike
+ceph_stable_release_uca: "{{ ansible_lsb.codename }}-updates/{{ ceph_stable_openstack_release_uca }}"
+
+######################
+# CEPH CONFIGURATION #
+######################
+
+
+ceph_conf_key_directory: /etc/ceph
+ceph_keyring_permissions: '0600'
+## Client options
+#
+rbd_cache: "true"
+rbd_cache_writethrough_until_flush: "true"
+rbd_concurrent_management_ops: 20
+
+#rbd_client_directories: true # this will create rbd_client_log_path and rbd_client_admin_socket_path directories with proper permissions
+
+# Permissions for the rbd_client_log_path and
+# rbd_client_admin_socket_path. Depending on your use case for Ceph
+# you may want to change these values. The default, which is used if
+# any of the variables are unset or set to a false value (like `null`
+# or `false`) is to automatically determine what is appropriate for
+# the Ceph version with non-OpenStack workloads -- ceph:ceph and 0770
+# for infernalis releases, and root:root and 1777 for pre-infernalis
+# releases.
+#
+# For other use cases, including running Ceph with OpenStack, you'll
+# want to set these differently:
+
+# For OpenStack on Ubuntu or Debian, set:
+rbd_client_directory_owner: "libvirt-qemu"
+rbd_client_directory_group: "kvm"
+rbd_client_directory_mode: "0755"
+
+rbd_client_log_path: /var/log/ceph
+rbd_client_log_file: "{{ rbd_client_log_path }}/qemu-guest-$pid.log" # must be writable by QEMU and allowed by SELinux or AppArmor
+rbd_client_admin_socket_path: /var/run/ceph
+
+## OSD options
+#
+#is_hci: false
+#hci_safety_factor: 0.2
+#non_hci_safety_factor: 0.7
+#osd_memory_target: 4294967296
+#journal_size: 5120 # OSD journal size in MB
+#block_db_size: -1 # block db size in bytes for the ceph-volume lvm batch. -1 means use the default of 'as big as possible'.
+#public_network: 0.0.0.0/0
+#cluster_network: "{{ public_network | regex_replace(' ', '') }}"
+osd_mkfs_type: ext4
+##osd_mkfs_options_xfs: -f -i size=2048
+#osd_mount_options_xfs: noatime,largeio,inode64,swalloc
+osd_objectstore: bluestore
+
+# Any device containing these patterns in their path will be excluded.
+#osd_auto_discovery_exclude: "dm-*|loop*|md*"
+
+# xattrs. by default, 'filestore xattr use omap' is set to 'true' if
+# 'osd_mkfs_type' is set to 'ext4'; otherwise it isn't set. This can
+# be set to 'true' or 'false' to explicitly override those
+# defaults. Leave it 'null' to use the default for your chosen mkfs
+# type.
+#filestore_xattr_use_omap: null
+copy_admin_key: true
+osd_auto_discovery: true
+
+generate_fsid: false
+fsid: 655fd276-fccc-4e30-b232-d98cfd1bf97d # Replace with your generated UUID
+
+## ceph-ansible settings
+## See https://github.com/ceph/ceph-ansible/tree/master/group_vars for
+## additional configuration options available.
+monitor_address_block: "{{ cidr_networks.container }}"
+public_network: "{{ cidr_networks.container }}"
+cluster_network: "{{ cidr_networks.storage }}"
+osd_scenario: collocated
+journal_size: 10240 # size in MB
+# ceph-ansible automatically creates pools & keys for OpenStack services
+
+ceph_conf_overrides:
+  global:
+     osd_pool_default_pg_num: 8
+
+openstack_config: true
+#############
+# OPENSTACK #
+#############
+cinder_ceph_client: cinder
+glance_ceph_client: glance
+glance_default_store: rbd
+glance_rbd_store_pool: images
+nova_libvirt_images_rbd_pool: vms
+
+cinder_backends:
+  RBD:
+    volume_driver: cinder.volume.drivers.rbd.RBDDriver
+    rbd_pool: volumes
+    rbd_ceph_conf: /etc/ceph/ceph.conf
+    rbd_store_chunk_size: 8
+    volume_backend_name: rbddriver
+    rbd_user: "{{ cinder_ceph_client }}"
+    rbd_secret_uuid: "{{ cinder_ceph_client_uuid }}"
+    report_discard_supported: true
+
